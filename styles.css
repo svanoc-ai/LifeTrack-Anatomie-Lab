@@ -7,10 +7,3 @@
 @media(min-width:650px){.controls{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}.controls button{grid-column:auto;width:auto}}
 @media(max-width:450px){header{flex-wrap:wrap;gap:3px}header small{display:block}.stage{height:min(62vh,620px)}}
 
-.diagnostic{border:1px solid #315264;border-radius:16px;padding:16px;margin-top:16px}
-.diagnostic h2{font-size:1.1rem;margin:0 0 8px}
-.diagnostic p{font-size:.9rem;color:#b0c9d0}
-.diagcontrols{display:grid;grid-template-columns:1fr 1fr;gap:12px}
-.diagcontrols label{display:grid;gap:6px;min-width:0}
-.diagcontrols select{width:100%;min-width:0;background:#183244;color:#fff;border:1px solid #426477;border-radius:9px;padding:10px}
-#diag{white-space:pre-wrap;overflow-wrap:anywhere;color:#b6e8e1;font-size:12px;line-height:1.6}

@@ -38,3 +38,10 @@ Correction d'axe longitudinal BodyExplorer par groupe de transformation indépen
 
 ## v4 diagnostic
 Affiche dimensions et orientation, permet de tester X/Z ±90/180 degrés. Ne prétend pas corriger définitivement le modèle. Le cadrage utilise désormais le pivot transformé.
+
+## LifeTrack LAB v5
+- BodyExplorer : correction fixe X = -90°, validée visuellement de face et de dos sur iPhone.
+- Suppression des réglages de diagnostic.
+- OrganUI et les interactions tactiles conservés.
+- Ligne centrale OrganUI et zones blanches BodyExplorer non corrigées.
+- LifeTrack Training n'est pas modifié.
