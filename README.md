@@ -35,3 +35,6 @@ Les conditions de redistribution et d'attribution des modèles s'appliquent ; v�
 
 ## LAB v3
 Correction d'axe longitudinal BodyExplorer par groupe de transformation indépendant, repérage de la tête via noms anatomiques, pivot vertical pour Face/Dos/Profil. OrganUI inchangé. Validation visuelle iPhone requise.
+
+## v4 diagnostic
+Affiche dimensions et orientation, permet de tester X/Z ±90/180 degrés. Ne prétend pas corriger définitivement le modèle. Le cadrage utilise désormais le pivot transformé.
