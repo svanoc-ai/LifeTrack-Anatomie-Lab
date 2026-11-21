@@ -53,10 +53,9 @@ Affiche dimensions et orientation, permet de tester X/Z ±90/180 degrés. Ne pr�
 - Aucun squelette ajouté, OrganUI inchangé, LifeTrack Training inchangé.
 - Prototype à valider visuellement sur Safari iPhone : le modèle source n'est pas inclus dans le ZIP, il est récupéré au déploiement.
 
-## V9 — visage humain épuré
-Reprise de la base V6. Remplacement de la tête par une surface faciale
-paramétrique chauve avec nez, yeux, bouche, oreilles et menton.
-Le corps musculaire et OrganUI ne sont pas modifiés.
-Attention : tête 3D générée procéduralement, non issue d'un scan réaliste ;
-rendu à confirmer sur iPhone avant validation.
-Les fichiers GLB sont chargés depuis le dossier models/ du déploiement existant.
+## Qualification — Lot 1 corrigé (20 groupes)
+Voir QUALIFICATION.md. Les associations proposées sont multiples et non validées. Le visuel V6 est conservé.
+
+
+## Lot 2 correctif
+Tête V6 restaurée à l’identique de l’archive V6 ; qualification 20 groupes conservée. Rapport CONTROLE-LOT2.md fondé sur le CSV exporté.
