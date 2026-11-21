@@ -32,3 +32,6 @@ Le workflow télécharge les **vrais fichiers GLB** à la compilation et refuse 
 - OrganUI Muscles : https://github.com/organui/muscles-3d — code MIT ; géométries BodyParts3D CC BY-SA 2.1 Japan.
 - Three.js : MIT.
 Les conditions de redistribution et d'attribution des modèles s'appliquent ; vérifier toute réutilisation dans une version distribuée.
+
+## LAB v3
+Correction d'axe longitudinal BodyExplorer par groupe de transformation indépendant, repérage de la tête via noms anatomiques, pivot vertical pour Face/Dos/Profil. OrganUI inchangé. Validation visuelle iPhone requise.
