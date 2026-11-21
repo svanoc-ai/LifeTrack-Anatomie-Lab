@@ -52,10 +52,11 @@ Affiche dimensions et orientation, permet de tester X/Z ±90/180 degrés. Ne pr�
 - Teinte les matériaux initialement quasi blancs en rose anatomique doux.
 - Aucun squelette ajouté, OrganUI inchangé, LifeTrack Training inchangé.
 - Prototype à valider visuellement sur Safari iPhone : le modèle source n'est pas inclus dans le ZIP, il est récupéré au déploiement.
-\n## LAB v8\nRetour base v6, crâne osseux stylisé (orbites, os frontal, pommettes, cavité nasale, maxillaire, mandibule, dents). Corps et OrganUI inchangés. Le crâne et les muscles faciaux sont des reconstructions illustratives, pas des modèles médicaux de précision.\n
-## Livrable v8 — validation finale LAB
-- Base stable v6, orientation X=-90°.
-- Crâne osseux apparent avec temporaux, masséters, zygomatiques, buccinateurs, orbiculaires et procerus stylisés.
-- Le rendu facial est une illustration géométrique simplifiée ; aucune garantie de réalisme anatomique strict.
-- Vérifier face, dos, profil, tactile et performance dans Safari avant validation.
-- Aucun fichier LifeTrack Training modifié.
+
+## V9 — visage humain épuré
+Reprise de la base V6. Remplacement de la tête par une surface faciale
+paramétrique chauve avec nez, yeux, bouche, oreilles et menton.
+Le corps musculaire et OrganUI ne sont pas modifiés.
+Attention : tête 3D générée procéduralement, non issue d'un scan réaliste ;
+rendu à confirmer sur iPhone avant validation.
+Les fichiers GLB sont chargés depuis le dossier models/ du déploiement existant.
