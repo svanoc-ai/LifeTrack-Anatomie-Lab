@@ -7,3 +7,8 @@
 @media(min-width:650px){.controls{grid-template-columns:minmax(0,1fr) minmax(0,1fr) auto}.controls button{grid-column:auto;width:auto}}
 @media(max-width:450px){header{flex-wrap:wrap;gap:3px}header small{display:block}.stage{height:min(62vh,620px)}}
 
+
+.qualification{border:1px solid #315266;border-radius:16px;padding:18px;margin-top:18px;background:#0b1e2b}
+.qualification h2{margin:0 0 10px;font-size:1.1rem}.qualification p{color:#b3c8d1;line-height:1.45}
+.qualification button{margin:8px 8px 0 0;padding:12px;border-radius:10px;background:#163647;color:#e6f7f4;border:1px solid #416372}
+.qualification button:disabled{opacity:.45}
