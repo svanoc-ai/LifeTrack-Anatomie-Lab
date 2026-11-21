@@ -52,3 +52,6 @@ Affiche dimensions et orientation, permet de tester X/Z ±90/180 degrés. Ne pr�
 - Teinte les matériaux initialement quasi blancs en rose anatomique doux.
 - Aucun squelette ajouté, OrganUI inchangé, LifeTrack Training inchangé.
 - Prototype à valider visuellement sur Safari iPhone : le modèle source n'est pas inclus dans le ZIP, il est récupéré au déploiement.
+
+## LAB v7
+Correction structurelle du visage : le modèle anatomique original est coupé au-dessus du cou par un plan GPU (`clippingPlanes`), indépendant des noms de maillages. Une tête de mannequin lisse, sans visage, est ajoutée à la place. Le corps sous le cou est conservé. Test visuel iPhone nécessaire.

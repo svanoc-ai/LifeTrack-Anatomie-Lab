@@ -6,7 +6,7 @@ const models={
  organ:{url:'./models/organui.glb',label:'OrganUI'}
 };
 const canvas=$('canvas'),renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
-renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.55;
+renderer.localClippingEnabled=true;renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.55;
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(36,1,.01,2000);
 scene.add(new THREE.HemisphereLight(0xffffff,0x73818a,2.7));
 for(const x of [-5,5]){const light=new THREE.DirectionalLight(0xffffff,2.2);light.position.set(x,7,9);scene.add(light)}
@@ -28,59 +28,61 @@ function applyView(){
   modelPivot.rotation.y=$('view').value==='back'?Math.PI:$('view').value==='side'?Math.PI/2:0;
   yaw=0;pitch=0;updateCamera();
 }
-// Tête de mannequin, sans traits faciaux. Elle remplace uniquement les petits
-// maillages contenus dans la région crânienne ; le cou reste anatomique.
-function stylizeHead(root, pivot){
+// Masquage garanti par plan de coupe GPU : contrairement à un filtrage par
+// nom de mesh, il fonctionne aussi si le visage appartient à un mesh géant.
+function stylizeHead(root,pivot){
   root.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(root);
-  const sz=bounds.getSize(new THREE.Vector3());
-  const h=sz.y;
+  const size=bounds.getSize(new THREE.Vector3());
   const top=bounds.max.y;
-  const headHeight=h*.115;
-  const neckLine=top-headHeight*1.08;
-  const headCenter=new THREE.Vector3(
-    bounds.getCenter(new THREE.Vector3()).x,
-    top-headHeight*.50,
-    bounds.getCenter(new THREE.Vector3()).z
-  );
-  let hidden=0;
+  const headHeight=size.y*.115;
+  const cutY=top-headHeight*.99;
+  window.__headCutY=cutY;
+  // Le plan garde la partie inférieure (y <= cutY).
+  const plane=new THREE.Plane(new THREE.Vector3(0,-1,0),cutY);
+  let clipped=0;
   root.traverse(o=>{
     if(!o.isMesh)return;
-    const b=new THREE.Box3().setFromObject(o);
-    if(b.isEmpty())return;
-    const c=b.getCenter(new THREE.Vector3());
-    const dims=b.getSize(new THREE.Vector3());
-    const cranialName=/(head|skull|crani|face|facial|frontal|tempor|orbicular|masseter|nasal|zygomat|mandib|maxill|occipit|buccinat|mentalis|eyeball|eye_|teeth|tooth|tongue)/i.test(o.name);
-    // Ne jamais cacher un maillage qui descend jusque dans le cou ou le tronc.
-    if(b.min.y>neckLine && (cranialName || (c.y>top-headHeight*.65 && dims.y<headHeight*.8))){
-      o.visible=false;hidden++;
+    const materials=Array.isArray(o.material)?o.material:[o.material];
+    for(const mat of materials){
+      if(!mat)continue;
+      mat.clippingPlanes=[plane];
+      mat.clipShadows=true;
+      mat.needsUpdate=true;
     }
+    clipped++;
   });
-  // Le rendu reste volontairement sobre, sans yeux, nez, bouche ni oreilles.
-  const material=new THREE.MeshStandardMaterial({
-    color:0xd99b8d,roughness:.94,metalness:0,side:THREE.FrontSide
+  const centerX=(bounds.min.x+bounds.max.x)/2;
+  const centerZ=(bounds.min.z+bounds.max.z)/2;
+  // Largeur du crâne proportionnelle aux épaules, sans traits faciaux.
+  const headWidth=size.x*.215;
+  const depth=headWidth*.84;
+  const skin=new THREE.MeshStandardMaterial({
+    color:'#dca69b',roughness:.91,metalness:0
   });
-  const group=new THREE.Group();
-  group.name='Tête stylisée — mannequin';
-  const skull=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),material);
-  skull.scale.set(sz.x*.118,headHeight*.50,sz.x*.112);
-  skull.position.copy(headCenter);
-  group.add(skull);
-  const jaw=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),material);
-  jaw.scale.set(sz.x*.091,headHeight*.245,sz.x*.096);
-  jaw.position.set(headCenter.x,top-headHeight*.78,headCenter.z+sz.x*.006);
-  group.add(jaw);
-  // La géométrie est ajoutée au pivot global, donc elle conserve l'axe Y.
-  pivot.add(group);
-  console.info('LifeTrack LAB v6 : structures crâniennes masquées :',hidden);
+  const head=new THREE.Group();
+  head.name='Tête stylisée lisse';
+  const skull=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),skin);
+  skull.name='Crâne stylisé';
+  skull.scale.set(headWidth*.50,headHeight*.50,depth*.50);
+  skull.position.set(centerX,top-headHeight*.48,centerZ);
+  head.add(skull);
+  // Bas du visage volontairement discret pour éviter un effet boule.
+  const chin=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),skin);
+  chin.name='Menton stylisé';
+  chin.scale.set(headWidth*.38,headHeight*.24,depth*.41);
+  chin.position.set(centerX,top-headHeight*.79,centerZ+depth*.055);
+  head.add(chin);
+  pivot.add(head);
+  console.info('LAB v7 : plan de coupe facial y=',cutY,'maillages=',clipped);
 }
-function materialize(root){root.traverse(o=>{if(!o.isMesh)return;const original=o.material;const color=original?.color?.clone?.()||new THREE.Color('#b25c58');// Harmonisation douce des zones très claires ; ne change pas les reliefs.
-  if(color.r>.87 && color.g>.87 && color.b>.87){
+function materialize(root, harmonize=false){root.traverse(o=>{if(!o.isMesh)return;const original=o.material;const color=original?.color?.clone?.()||new THREE.Color('#b25c58');// Harmonisation douce des zones très claires ; ne change pas les reliefs.
+  if(harmonize && color.r>.87 && color.g>.87 && color.b>.87){
     color.set('#d7a69b');
   }
   const mat=new THREE.MeshStandardMaterial({color,roughness:.86,metalness:0,side:THREE.DoubleSide});o.material=mat;o.userData.sourceMaterial=original?.name||''})}
 async function load(){const id=++loadId,key=$('model').value; $('status').textContent='Chargement du modèle '+models[key].label+'…';$('name').textContent='—';if(modelPivot){scene.remove(modelPivot);modelPivot=null;body=null}try{const gltf=await loader.loadAsync(models[key].url);if(id!==loadId)return;body=gltf.scene;
-    materialize(body);
+    materialize(body,key==='body');
     modelPivot=new THREE.Group();
     modelPivot.name='Pivot vertical';
     modelCorrection=key==='body'?normalizeBodyExplorer(body):body;
@@ -123,7 +125,7 @@ canvas.addEventListener('pointerup',e=>{
     const rect=canvas.getBoundingClientRect();
     pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
     ray.setFromCamera(pointer,camera);
-    const hit=ray.intersectObject(body,true)[0];
+    const hit=ray.intersectObject(body,true).find(h=>h.point.y<=((window.__headCutY??Infinity)+.001));
     if(hit){
       $('name').textContent=hit.object.name||hit.object.parent?.name||'Structure sans nom';
       $('details').textContent='Nom issu du modèle anatomique ; correspondance sportive à vérifier.';
