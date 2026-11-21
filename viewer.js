@@ -28,7 +28,57 @@ function applyView(){
   modelPivot.rotation.y=$('view').value==='back'?Math.PI:$('view').value==='side'?Math.PI/2:0;
   yaw=0;pitch=0;updateCamera();
 }
-function materialize(root){root.traverse(o=>{if(!o.isMesh)return;const original=o.material;const color=original?.color?.clone?.()||new THREE.Color('#b25c58');const mat=new THREE.MeshStandardMaterial({color,roughness:.86,metalness:0,side:THREE.DoubleSide});o.material=mat;o.userData.sourceMaterial=original?.name||''})}
+// Tête de mannequin, sans traits faciaux. Elle remplace uniquement les petits
+// maillages contenus dans la région crânienne ; le cou reste anatomique.
+function stylizeHead(root, pivot){
+  root.updateMatrixWorld(true);
+  const bounds=new THREE.Box3().setFromObject(root);
+  const sz=bounds.getSize(new THREE.Vector3());
+  const h=sz.y;
+  const top=bounds.max.y;
+  const headHeight=h*.115;
+  const neckLine=top-headHeight*1.08;
+  const headCenter=new THREE.Vector3(
+    bounds.getCenter(new THREE.Vector3()).x,
+    top-headHeight*.50,
+    bounds.getCenter(new THREE.Vector3()).z
+  );
+  let hidden=0;
+  root.traverse(o=>{
+    if(!o.isMesh)return;
+    const b=new THREE.Box3().setFromObject(o);
+    if(b.isEmpty())return;
+    const c=b.getCenter(new THREE.Vector3());
+    const dims=b.getSize(new THREE.Vector3());
+    const cranialName=/(head|skull|crani|face|facial|frontal|tempor|orbicular|masseter|nasal|zygomat|mandib|maxill|occipit|buccinat|mentalis|eyeball|eye_|teeth|tooth|tongue)/i.test(o.name);
+    // Ne jamais cacher un maillage qui descend jusque dans le cou ou le tronc.
+    if(b.min.y>neckLine && (cranialName || (c.y>top-headHeight*.65 && dims.y<headHeight*.8))){
+      o.visible=false;hidden++;
+    }
+  });
+  // Le rendu reste volontairement sobre, sans yeux, nez, bouche ni oreilles.
+  const material=new THREE.MeshStandardMaterial({
+    color:0xd99b8d,roughness:.94,metalness:0,side:THREE.FrontSide
+  });
+  const group=new THREE.Group();
+  group.name='Tête stylisée — mannequin';
+  const skull=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),material);
+  skull.scale.set(sz.x*.118,headHeight*.50,sz.x*.112);
+  skull.position.copy(headCenter);
+  group.add(skull);
+  const jaw=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),material);
+  jaw.scale.set(sz.x*.091,headHeight*.245,sz.x*.096);
+  jaw.position.set(headCenter.x,top-headHeight*.78,headCenter.z+sz.x*.006);
+  group.add(jaw);
+  // La géométrie est ajoutée au pivot global, donc elle conserve l'axe Y.
+  pivot.add(group);
+  console.info('LifeTrack LAB v6 : structures crâniennes masquées :',hidden);
+}
+function materialize(root){root.traverse(o=>{if(!o.isMesh)return;const original=o.material;const color=original?.color?.clone?.()||new THREE.Color('#b25c58');// Harmonisation douce des zones très claires ; ne change pas les reliefs.
+  if(color.r>.87 && color.g>.87 && color.b>.87){
+    color.set('#d7a69b');
+  }
+  const mat=new THREE.MeshStandardMaterial({color,roughness:.86,metalness:0,side:THREE.DoubleSide});o.material=mat;o.userData.sourceMaterial=original?.name||''})}
 async function load(){const id=++loadId,key=$('model').value; $('status').textContent='Chargement du modèle '+models[key].label+'…';$('name').textContent='—';if(modelPivot){scene.remove(modelPivot);modelPivot=null;body=null}try{const gltf=await loader.loadAsync(models[key].url);if(id!==loadId)return;body=gltf.scene;
     materialize(body);
     modelPivot=new THREE.Group();
@@ -36,6 +86,8 @@ async function load(){const id=++loadId,key=$('model').value; $('status').textCo
     modelCorrection=key==='body'?normalizeBodyExplorer(body):body;
     modelPivot.add(modelCorrection);
     scene.add(modelPivot);
+    modelPivot.updateMatrixWorld(true);
+    if(key==='body')stylizeHead(modelCorrection,modelPivot);
     modelPivot.updateMatrixWorld(true);
     fit();$('view').value='front';$('status').textContent='Modèle chargé · glisser pour tourner, pincer pour zoomer'}catch(e){$('status').textContent='Échec de chargement : '+e.message;console.error(e)}}
 $('model').onchange=load;

@@ -45,3 +45,10 @@ Affiche dimensions et orientation, permet de tester X/Z ±90/180 degrés. Ne pr�
 - OrganUI et les interactions tactiles conservés.
 - Ligne centrale OrganUI et zones blanches BodyExplorer non corrigées.
 - LifeTrack Training n'est pas modifié.
+
+## LifeTrack LAB v6 — prototype de tête stylisée
+- Ajoute une tête de mannequin sans traits faciaux par géométrie Three.js.
+- Masque sélectivement les petits maillages crâniens, sans toucher aux muscles du cou.
+- Teinte les matériaux initialement quasi blancs en rose anatomique doux.
+- Aucun squelette ajouté, OrganUI inchangé, LifeTrack Training inchangé.
+- Prototype à valider visuellement sur Safari iPhone : le modèle source n'est pas inclus dans le ZIP, il est récupéré au déploiement.
