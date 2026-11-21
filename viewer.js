@@ -6,7 +6,7 @@ const models={
  organ:{url:'./models/organui.glb',label:'OrganUI'}
 };
 const canvas=$('canvas'),renderer=new THREE.WebGLRenderer({canvas,antialias:true,alpha:true,powerPreference:'high-performance'});
-renderer.localClippingEnabled=true;renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.55;
+renderer.setPixelRatio(Math.min(devicePixelRatio||1,2));renderer.outputColorSpace=THREE.SRGBColorSpace;renderer.toneMapping=THREE.ACESFilmicToneMapping;renderer.toneMappingExposure=1.55;
 const scene=new THREE.Scene(),camera=new THREE.PerspectiveCamera(36,1,.01,2000);
 scene.add(new THREE.HemisphereLight(0xffffff,0x73818a,2.7));
 for(const x of [-5,5]){const light=new THREE.DirectionalLight(0xffffff,2.2);light.position.set(x,7,9);scene.add(light)}
@@ -28,53 +28,82 @@ function applyView(){
   modelPivot.rotation.y=$('view').value==='back'?Math.PI:$('view').value==='side'?Math.PI/2:0;
   yaw=0;pitch=0;updateCamera();
 }
-// Masquage garanti par plan de coupe GPU : contrairement à un filtrage par
-// nom de mesh, il fonctionne aussi si le visage appartient à un mesh géant.
+// LAB v8 — crâne osseux stylisé, reconstruit sur la base stable v6.
+// Coupe GPU de la tête d'origine, sans altérer le corps sous le cou.
 function stylizeHead(root,pivot){
   root.updateMatrixWorld(true);
   const bounds=new THREE.Box3().setFromObject(root);
   const size=bounds.getSize(new THREE.Vector3());
-  const top=bounds.max.y;
-  const headHeight=size.y*.115;
-  const cutY=top-headHeight*.99;
-  window.__headCutY=cutY;
-  // Le plan garde la partie inférieure (y <= cutY).
-  const plane=new THREE.Plane(new THREE.Vector3(0,-1,0),cutY);
-  let clipped=0;
+  const top=bounds.max.y, H=size.y*.115, W=size.x*.24;
+  const cx=(bounds.min.x+bounds.max.x)/2;
+  const cz=(bounds.min.z+bounds.max.z)/2;
+  const cut=top-H*1.02;
+  const plane=new THREE.Plane(new THREE.Vector3(0,-1,0),cut);
+  renderer.localClippingEnabled=true;
   root.traverse(o=>{
     if(!o.isMesh)return;
-    const materials=Array.isArray(o.material)?o.material:[o.material];
-    for(const mat of materials){
-      if(!mat)continue;
-      mat.clippingPlanes=[plane];
-      mat.clipShadows=true;
-      mat.needsUpdate=true;
+    const mats=Array.isArray(o.material)?o.material:[o.material];
+    for(const m of mats)if(m){m.clippingPlanes=[plane];m.needsUpdate=true}
+  });
+  const bone=new THREE.MeshStandardMaterial({color:0xe5d8bd,roughness:.93,metalness:0});
+  const dark=new THREE.MeshStandardMaterial({color:0x302c29,roughness:1,metalness:0});
+  const group=new THREE.Group();
+  group.name='Crâne osseux stylisé — LAB v8';
+  // Face visible dans la direction +Z (orientation BodyExplorer validée).
+  const faceZ=cz+W*.37;
+  const add=(name,mat,x,y,z,sx,sy,sz,detail=28)=>{
+    const m=new THREE.Mesh(new THREE.SphereGeometry(1,detail,20),mat);
+    m.name=name;m.position.set(cx+x,y,z);m.scale.set(sx,sy,sz);group.add(m);return m;
+  };
+  // Voûte crânienne, os frontal et mâchoire.
+  add('Voûte crânienne',bone,0,top-H*.39,cz,W*.51,H*.43,W*.43);
+  add('Os frontal',bone,0,top-H*.39,faceZ,W*.45,H*.25,W*.16);
+  add('Maxillaire',bone,0,top-H*.73,faceZ+W*.04,W*.30,H*.135,W*.18);
+  add('Mandibule',bone,0,top-H*.90,faceZ-W*.025,W*.33,H*.10,W*.17);
+  // Orbites noires en creux, entourées par les rebords osseux.
+  for(const side of [-1,1]){
+    const x=side*W*.22;
+    add('Orbite',dark,x,top-H*.56,faceZ+W*.14,W*.155,H*.115,W*.034);
+    add('Rebord orbitaire supérieur',bone,x,top-H*.445,faceZ+W*.13,W*.18,H*.034,W*.066);
+    add('Pommette',bone,side*W*.35,top-H*.68,faceZ+W*.08,W*.125,H*.075,W*.10);
+    add('Branche mandibulaire',bone,side*W*.29,top-H*.79,faceZ-W*.03,W*.055,H*.17,W*.08);
+  }
+  add('Cavité nasale',dark,0,top-H*.705,faceZ+W*.195,W*.085,H*.095,W*.024);
+  add('Arête nasale',bone,0,top-H*.59,faceZ+W*.19,W*.038,H*.10,W*.06);
+  // Arcade dentaire simplifiée, volontairement discrète à l'échelle iPhone.
+  for(let i=-3;i<=3;i++){
+    const tooth=new THREE.Mesh(new THREE.BoxGeometry(W*.075,H*.046,W*.052),bone);
+    tooth.name='Dent supérieure';
+    tooth.position.set(cx+i*W*.078,top-H*.805,faceZ+W*.18);
+    group.add(tooth);
+  }
+  // Muscles faciaux superficiels visibles sur la structure osseuse.
+  // Géométries simplifiées, identifiables mais non destinées à un usage médical.
+  const muscle=new THREE.MeshStandardMaterial({color:0xa94b49,roughness:.87,metalness:0});
+  const muscleLight=new THREE.MeshStandardMaterial({color:0xc46b61,roughness:.89,metalness:0});
+  const addMuscle=(name,x,y,z,sx,sy,sz,rot=0,mat=muscle)=>{
+    const mesh=add(name,mat,x,y,z,sx,sy,sz);
+    mesh.rotation.z=rot;
+    return mesh;
+  };
+  for(const side of [-1,1]){
+    // Muscle temporal, de la tempe vers l'arcade zygomatique.
+    addMuscle('Muscle temporal',side*W*.455,top-H*.43,cz+W*.15,W*.078,H*.235,W*.082,side*.18);
+    // Masséter sur la branche mandibulaire.
+    addMuscle('Muscle masséter',side*W*.335,top-H*.745,faceZ+W*.075,W*.082,H*.17,W*.073,-side*.14);
+    // Muscle zygomatique majeur en diagonale vers la commissure labiale.
+    addMuscle('Muscle zygomatique majeur',side*W*.245,top-H*.715,faceZ+W*.19,W*.043,H*.13,W*.043,-side*.54,muscleLight);
+    // Orbiculaire de l'œil : deux arcs musculaires autour des orbites.
+    for(const dy of [-1,1]){
+      addMuscle('Muscle orbiculaire de l’œil',side*W*.22,top-H*(.56+dy*.112),faceZ+W*.185,W*.135,H*.029,W*.031,0,muscleLight);
     }
-    clipped++;
-  });
-  const centerX=(bounds.min.x+bounds.max.x)/2;
-  const centerZ=(bounds.min.z+bounds.max.z)/2;
-  // Largeur du crâne proportionnelle aux épaules, sans traits faciaux.
-  const headWidth=size.x*.215;
-  const depth=headWidth*.84;
-  const skin=new THREE.MeshStandardMaterial({
-    color:'#dca69b',roughness:.91,metalness:0
-  });
-  const head=new THREE.Group();
-  head.name='Tête stylisée lisse';
-  const skull=new THREE.Mesh(new THREE.SphereGeometry(1,48,32),skin);
-  skull.name='Crâne stylisé';
-  skull.scale.set(headWidth*.50,headHeight*.50,depth*.50);
-  skull.position.set(centerX,top-headHeight*.48,centerZ);
-  head.add(skull);
-  // Bas du visage volontairement discret pour éviter un effet boule.
-  const chin=new THREE.Mesh(new THREE.SphereGeometry(1,32,24),skin);
-  chin.name='Menton stylisé';
-  chin.scale.set(headWidth*.38,headHeight*.24,depth*.41);
-  chin.position.set(centerX,top-headHeight*.79,centerZ+depth*.055);
-  head.add(chin);
-  pivot.add(head);
-  console.info('LAB v7 : plan de coupe facial y=',cutY,'maillages=',clipped);
+    // Muscle buccinateur sur les joues.
+    addMuscle('Muscle buccinateur',side*W*.19,top-H*.785,faceZ+W*.22,W*.091,H*.045,W*.036,side*.10);
+  }
+  addMuscle('Muscle procerus',0,top-H*.635,faceZ+W*.22,W*.040,H*.077,W*.035);
+  // Bande orbiculaire des lèvres, volontairement discrète.
+  addMuscle('Muscle orbiculaire de la bouche',0,top-H*.805,faceZ+W*.23,W*.19,H*.027,W*.034,0,muscleLight);
+  pivot.add(group);
 }
 function materialize(root, harmonize=false){root.traverse(o=>{if(!o.isMesh)return;const original=o.material;const color=original?.color?.clone?.()||new THREE.Color('#b25c58');// Harmonisation douce des zones très claires ; ne change pas les reliefs.
   if(harmonize && color.r>.87 && color.g>.87 && color.b>.87){
@@ -125,7 +154,7 @@ canvas.addEventListener('pointerup',e=>{
     const rect=canvas.getBoundingClientRect();
     pointer.set((e.clientX-rect.left)/rect.width*2-1,-(e.clientY-rect.top)/rect.height*2+1);
     ray.setFromCamera(pointer,camera);
-    const hit=ray.intersectObject(body,true).find(h=>h.point.y<=((window.__headCutY??Infinity)+.001));
+    const hit=ray.intersectObject(body,true)[0];
     if(hit){
       $('name').textContent=hit.object.name||hit.object.parent?.name||'Structure sans nom';
       $('details').textContent='Nom issu du modèle anatomique ; correspondance sportive à vérifier.';
